@@ -1,0 +1,30 @@
+# Behavry Proxy + OPA sidecar
+#
+# Usage:
+#   docker compose up
+#   curl http://localhost:8080/health
+
+services:
+  proxy:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - BEHAVRY_OPA_URL=http://opa:8181
+      - BEHAVRY_SERVERS_CONFIG=/app/config/servers.yaml
+      - BEHAVRY_POLICIES_DIR=/app/policies
+    volumes:
+      - ./config:/app/config:ro
+      - ./policies:/app/policies:ro
+    depends_on:
+      - opa
+
+  opa:
+    image: openpolicyagent/opa:latest
+    ports:
+      - "8181:8181"
+    command:
+      - "run"
+      - "--server"
+      - "--addr=0.0.0.0:8181"
+      - "--log-level=info"

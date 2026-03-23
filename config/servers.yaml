@@ -1,0 +1,30 @@
+# Behavry Proxy — MCP Server Configuration
+#
+# Define the backend MCP servers that the proxy will forward requests to.
+# Each server needs an id, name, and transport configuration.
+#
+# Environment variable: BEHAVRY_SERVERS_CONFIG (default: config/servers.yaml)
+
+servers:
+  # Example: HTTP-based MCP server
+  # - id: my-http-server
+  #   name: My HTTP MCP Server
+  #   transport: http
+  #   url: http://localhost:3000/mcp
+  #   description: Example HTTP MCP server
+
+  # Example: stdio-based MCP server (spawns a subprocess)
+  # - id: my-stdio-server
+  #   name: My Stdio MCP Server
+  #   transport: stdio
+  #   command: ["python3", "/path/to/server.py"]
+  #   env:
+  #     SOME_VAR: "value"
+  #   description: Example stdio MCP server
+
+  # Example: Claude Desktop filesystem server
+  # - id: filesystem
+  #   name: Filesystem Server
+  #   transport: stdio
+  #   command: ["npx", "-y", "@modelcontextprotocol/server-filesystem", "/tmp/sandbox"]
+  #   description: MCP filesystem server with sandboxed access

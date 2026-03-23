@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "github-governed": {
+      "url": "http://localhost:8080/mcp/v1/github",
+      "headers": {
+        "X-Agent-Id": "claude-desktop"
+      }
+    },
+    "filesystem-governed": {
+      "url": "http://localhost:8080/mcp/v1/filesystem",
+      "headers": {
+        "X-Agent-Id": "claude-desktop"
+      }
+    }
+  }
+}

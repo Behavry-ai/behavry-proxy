@@ -1,0 +1,26 @@
+# Behavry Proxy — MCP Server Configuration
+#
+# Copy this file to config/servers.yaml and configure your upstream MCP servers.
+# Each server must have a unique id and a transport (only "http" is supported in v0.1).
+
+servers:
+  # Example: GitHub MCP server
+  - id: github
+    name: GitHub MCP Server
+    transport: http
+    url: http://localhost:3000
+    description: GitHub API via MCP
+
+  # Example: Filesystem MCP server
+  - id: filesystem
+    name: Filesystem Server
+    transport: http
+    url: http://localhost:3001
+    description: Local filesystem access via MCP
+
+  # Example: Slack MCP server
+  # - id: slack
+  #   name: Slack MCP Server
+  #   transport: http
+  #   url: http://localhost:3002
+  #   description: Slack API via MCP

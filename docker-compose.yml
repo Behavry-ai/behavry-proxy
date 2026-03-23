@@ -1,0 +1,41 @@
+# Behavry Proxy + OPA sidecar
+#
+# Usage: docker compose up
+#
+# The proxy starts on port 8080, OPA on 8181.
+# First governed tool call in <3 minutes.
+
+services:
+  proxy:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      BEHAVRY_PROXY_OPA_URL: http://opa:8181
+      BEHAVRY_PROXY_OPA_FAIL_CLOSED: "true"
+      BEHAVRY_PROXY_AUDIT_STDOUT: "true"
+    volumes:
+      - ./config:/app/config:ro
+      - ./policies:/app/policies:ro
+      - audit-logs:/app/logs
+    depends_on:
+      opa:
+        condition: service_healthy
+
+  opa:
+    image: openpolicyagent/opa:0.71.0-static
+    command:
+      - "run"
+      - "--server"
+      - "--addr=0.0.0.0:8181"
+      - "--log-level=info"
+    ports:
+      - "8181:8181"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8181/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  audit-logs:
