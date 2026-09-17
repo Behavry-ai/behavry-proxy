@@ -183,7 +183,7 @@ echo '{"input": {"agent": {"id": "test"}, "request": {"tool_name": "read_file", 
 
 ```bash
 # Send a test tool call
-curl -X POST http://localhost:8080/mcp/v1/filesystem \
+curl -X POST http://localhost:8080/mcp/filesystem \
   -H "Content-Type: application/json" \
   -H "X-Agent-Id: test-agent" \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"read_file","arguments":{"path":"/tmp/test.txt"}}}'

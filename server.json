@@ -1,0 +1,30 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "ai.behavry/proxy",
+  "title": "Behavry Proxy",
+  "description": "Inline MCP governance proxy: policy, DLP and injection checks before each tool call runs.",
+  "version": "0.1.0",
+  "websiteUrl": "https://behavry.ai/mcp-governance",
+  "repository": {
+    "url": "https://github.com/Behavry-ai/behavry-proxy",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "behavry-proxy",
+      "version": "0.1.0",
+      "transport": {
+        "type": "streamable-http",
+        "url": "http://localhost:8080/mcp/{server_id}",
+        "headers": [
+          {
+            "name": "X-Agent-Id",
+            "description": "Identifier for the calling agent, recorded on every policy decision",
+            "isRequired": false
+          }
+        ]
+      }
+    }
+  ]
+}

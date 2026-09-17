@@ -1,5 +1,7 @@
 # Behavry Proxy
 
+<!-- mcp-name: ai.behavry/proxy -->
+
 **Open-source inline MCP governance proxy** — policy enforcement, DLP scanning, and injection detection for AI agents.
 
 Behavry Proxy sits between your MCP clients (Claude, Cursor, custom agents) and MCP servers, intercepting every tool call. Each request is evaluated against OPA/Rego policies, scanned for sensitive data leaks, and checked for prompt injection — before the agent can act.
@@ -40,7 +42,7 @@ Behavry Proxy enforces governance at the protocol layer. Every `tools/call` pass
 ### Docker Compose (recommended)
 
 ```bash
-git clone https://github.com/behavry/behavry-proxy.git
+git clone https://github.com/Behavry-ai/behavry-proxy.git
 cd behavry-proxy
 cp config/servers.yaml.example config/servers.yaml
 # Edit config/servers.yaml with your MCP server URLs
@@ -66,13 +68,13 @@ curl http://localhost:8080/health
 curl http://localhost:8080/metrics
 
 # List configured servers
-curl http://localhost:8080/mcp/v1/servers
+curl http://localhost:8080/servers
 ```
 
 ## Your First Governed Tool Call
 
 ```bash
-curl -X POST http://localhost:8080/mcp/v1/github \
+curl -X POST http://localhost:8080/mcp/github \
   -H "Content-Type: application/json" \
   -H "X-Agent-Id: my-agent" \
   -d '{
@@ -96,7 +98,7 @@ Point your MCP client at the proxy URL instead of directly at the MCP server.
 {
   "mcpServers": {
     "github-governed": {
-      "url": "http://localhost:8080/mcp/v1/github",
+      "url": "http://localhost:8080/mcp/github",
       "headers": { "X-Agent-Id": "claude-desktop" }
     }
   }
@@ -110,7 +112,7 @@ Point your MCP client at the proxy URL instead of directly at the MCP server.
   "mcpServers": {
     "github-governed": {
       "type": "url",
-      "url": "http://localhost:8080/mcp/v1/github",
+      "url": "http://localhost:8080/mcp/github",
       "headers": { "X-Agent-Id": "claude-code" }
     }
   }
@@ -227,8 +229,8 @@ python -m behavry_proxy.tui.dashboard /path/to/audit.jsonl
 
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | `/mcp/v1/{server_id}` | MCP proxy endpoint |
-| GET | `/mcp/v1/servers` | List configured servers |
+| POST | `/mcp/{server_id}` | MCP proxy endpoint |
+| GET | `/servers` | List configured servers |
 | GET | `/health` | Liveness + OPA status |
 | GET | `/metrics` | Prometheus counters |
 

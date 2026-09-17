@@ -65,7 +65,7 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
 {
   "mcpServers": {
     "github-governed": {
-      "url": "http://localhost:8080/mcp/v1/github",
+      "url": "http://localhost:8080/mcp/github",
       "headers": {
         "X-Agent-Id": "claude-desktop"
       }
@@ -81,7 +81,7 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
   "mcpServers": {
     "github-governed": {
       "type": "url",
-      "url": "http://localhost:8080/mcp/v1/github",
+      "url": "http://localhost:8080/mcp/github",
       "headers": {
         "X-Agent-Id": "claude-code"
       }
@@ -96,7 +96,7 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
 {
   "mcpServers": {
     "github-governed": {
-      "url": "http://localhost:8080/mcp/v1/github",
+      "url": "http://localhost:8080/mcp/github",
       "headers": {
         "X-Agent-Id": "cursor"
       }
