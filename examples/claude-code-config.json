@@ -2,14 +2,14 @@
   "mcpServers": {
     "github-governed": {
       "type": "url",
-      "url": "http://localhost:8080/mcp/v1/github",
+      "url": "http://localhost:8080/mcp/github",
       "headers": {
         "X-Agent-Id": "claude-code"
       }
     },
     "filesystem-governed": {
       "type": "url",
-      "url": "http://localhost:8080/mcp/v1/filesystem",
+      "url": "http://localhost:8080/mcp/filesystem",
       "headers": {
         "X-Agent-Id": "claude-code"
       }

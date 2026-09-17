@@ -1,13 +1,13 @@
 {
   "mcpServers": {
     "github-governed": {
-      "url": "http://localhost:8080/mcp/v1/github",
+      "url": "http://localhost:8080/mcp/github",
       "headers": {
         "X-Agent-Id": "cursor"
       }
     },
     "filesystem-governed": {
-      "url": "http://localhost:8080/mcp/v1/filesystem",
+      "url": "http://localhost:8080/mcp/filesystem",
       "headers": {
         "X-Agent-Id": "cursor"
       }

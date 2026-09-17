@@ -49,11 +49,11 @@ echo "   Proxy:   http://localhost:8080"
 echo "   OPA:     http://localhost:8181"
 echo "   Health:  http://localhost:8080/health"
 echo "   Metrics: http://localhost:8080/metrics"
-echo "   Servers: http://localhost:8080/mcp/v1/servers"
+echo "   Servers: http://localhost:8080/servers"
 echo ""
 echo "📋 Example tool call:"
 echo ""
-echo '   curl -X POST http://localhost:8080/mcp/v1/github \\'
+echo '   curl -X POST http://localhost:8080/mcp/github \\'
 echo '     -H "Content-Type: application/json" \\'
 echo '     -H "X-Agent-Id: my-agent" \\'
 echo '     -d '"'"'{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"list_repos","arguments":{"org":"behavry"}}}'"'"''
