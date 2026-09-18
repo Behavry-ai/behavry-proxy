@@ -80,7 +80,10 @@ JSON lines output to file and/or stdout. Each event includes:
 - Timing (total latency)
 
 ### Metrics (`metrics.py`)
-Prometheus-compatible counters at `GET /metrics`:
+In-process counters that can render as Prometheus text. Not exposed over HTTP
+and not yet wired into the pipeline — the per-request counters that are
+actually maintained live in the audit emitter and are served by `GET /stats`.
+Counters defined:
 - `behavry_proxy_tool_calls_total` / `_allowed` / `_denied`
 - `behavry_proxy_dlp_findings_total`
 - `behavry_proxy_inbound_findings_total`
@@ -103,7 +106,7 @@ Rich-based live terminal display showing:
 | Data Validation | Pydantic v2 |
 | Config Format | YAML (servers), env vars (everything else) |
 | TUI | Rich |
-| Metrics | Prometheus text format (no external deps) |
+| Metrics | Audit event counters via `GET /stats` |
 | Audit | JSON lines |
 | Container | Docker + Docker Compose |
 
