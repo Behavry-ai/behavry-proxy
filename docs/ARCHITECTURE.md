@@ -122,4 +122,4 @@ v0.1 supports HTTP transport only. Stdio backends (subprocess-spawned MCP server
 Rate limiting uses in-memory data structures — no Redis dependency. This works correctly for single-process deployments. If you need distributed rate limiting, that's a signal you need the commercial product.
 
 ### Deny-Only Enforcement
-When OPA returns `escalate`, the proxy treats it as `deny`. There is no human-in-the-loop approval queue. If you need HITL, see [Behavry Enterprise](../COMMERCIAL.md).
+When OPA returns `escalate`, the proxy enforces it as `deny` and records a `tool_escalate` audit event. There is no human-in-the-loop approval queue. If you need HITL, see [Behavry Enterprise](../COMMERCIAL.md).

@@ -15,7 +15,7 @@ from __future__ import annotations
 import asyncio
 import json
 import time
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 from threading import Thread
 from typing import Any
@@ -28,7 +28,6 @@ from rich.table import Table
 from rich.text import Text
 
 from behavry_proxy import __version__
-
 
 # ---------------------------------------------------------------------------
 # Data model

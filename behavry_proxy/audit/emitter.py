@@ -9,7 +9,6 @@ from __future__ import annotations
 import json
 import logging
 import sys
-import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
@@ -69,7 +68,9 @@ class AuditEmitter:
     def emit(self, event: AuditEvent) -> None:
         """Emit an audit event to all configured outputs."""
         self._event_count += 1
-        if event.event_type == "tool_deny":
+        # An escalation the OSS proxy cannot route to a human is enforced as a
+        # denial, so it counts as one here too.
+        if event.event_type in ("tool_deny", "tool_escalate"):
             self._deny_count += 1
         elif event.event_type == "dlp_finding":
             self._dlp_count += 1

@@ -33,7 +33,6 @@ from behavry_proxy.proxy.mcp import (
     JsonRpcRequest,
     JsonRpcResponse,
     ProxyResult,
-    ToolCallParams,
 )
 from behavry_proxy.proxy.rate_limiter import get_rate_limiter
 from behavry_proxy.proxy.registry import get_backend
@@ -262,13 +261,17 @@ async def enforce(
         resource=resource,
         parameters=parameters,
         mcp_server=server_id,
+        dlp_findings=dlp_findings,
+        dlp_max_severity=get_dlp_scanner().max_severity(dlp_findings) if dlp_findings else None,
     )
     decision = await opa.decide(opa_input, policy_path=cfg.opa_policy_path)
 
-    if decision.is_deny:
+    # `escalate` means a human should approve. The OSS proxy has no approval
+    # queue, so it is enforced as a deny rather than allowed through.
+    if decision.is_deny or decision.is_escalate:
         emitter.emit(AuditEvent(
             timestamp=time.time(),
-            event_type="tool_deny",
+            event_type="tool_escalate" if decision.is_escalate else "tool_deny",
             agent_id=agent_id,
             server_id=server_id,
             tool_name=tool_name,
@@ -278,6 +281,11 @@ async def enforce(
             policy_reason=decision.reason,
             policy_id=decision.policy,
         ))
+        message = (
+            f"Policy requires approval (no approval queue in the OSS proxy): {decision.reason}"
+            if decision.is_escalate
+            else f"Policy denied: {decision.reason}"
+        )
         return ProxyResult(
             allowed=False,
             policy_result=decision.result,
@@ -285,10 +293,7 @@ async def enforce(
             policy_id=decision.policy,
             response=JsonRpcResponse(
                 id=request.id,
-                error=JsonRpcError(
-                    code=JSONRPC_FORBIDDEN,
-                    message=f"Policy denied: {decision.reason}",
-                ),
+                error=JsonRpcError(code=JSONRPC_FORBIDDEN, message=message),
             ),
             latency_ms=(time.perf_counter() - t0) * 1000,
         )

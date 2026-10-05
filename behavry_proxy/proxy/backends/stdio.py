@@ -10,9 +10,8 @@ import asyncio
 import json
 import logging
 import os
-from typing import Any
 
-from behavry_proxy.proxy.mcp import JsonRpcRequest, JsonRpcResponse, JsonRpcError
+from behavry_proxy.proxy.mcp import JsonRpcError, JsonRpcRequest, JsonRpcResponse
 
 logger = logging.getLogger(__name__)
 

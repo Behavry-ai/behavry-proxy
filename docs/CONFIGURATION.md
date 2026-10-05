@@ -117,25 +117,33 @@ If no header is provided, the agent is identified as `"default"`.
 
 ## OPA Policies
 
-Rego policies live in the `policies/` directory and are pushed to OPA on proxy startup.
+A reference policy set ships inside the package, so the proxy always has
+something valid to push to OPA. Run `behavry-proxy init` for an editable copy
+in `./policies`, or point `BEHAVRY_POLICIES_DIR` / `--policies` at your own
+directory. Policies are pushed to OPA on proxy startup.
+
+Policies are Rego v1 and require OPA 1.0 or newer.
 
 ### Policy Structure
 
 ```
 policies/
+├── decision.rego            # Entry point — aggregates `deny`, owns `decision`
 ├── base/
-│   ├── default.rego        # Default deny (fail-closed)
-│   ├── allow_all.rego      # Allow everything (dev only!)
-│   └── action_policies.rego # Action-type classification
+│   └── action_policies.rego # Cross-server action rules (destructive verbs)
 ├── servers/
-│   ├── filesystem.rego     # Filesystem-specific rules
-│   ├── github.rego         # GitHub-specific rules
-│   ├── database.rego       # Database-specific rules
-│   ├── slack.rego          # Slack-specific rules
-│   └── web_api.rego        # Generic web API rules
+│   ├── filesystem.rego      # Filesystem-specific rules
+│   ├── github.rego          # GitHub-specific rules
+│   ├── database.rego        # Database-specific rules
+│   ├── slack.rego           # Slack-specific rules
+│   └── web_api.rego         # Generic web API rules
 └── dlp/
-    └── sensitive_data.rego # DLP-aware policy rules
+    └── sensitive_data.rego  # DLP-aware policy rules
 ```
+
+Only `decision.rego` defines `decision`. Every other file contributes to a
+`deny` set so that rules compose instead of conflicting — see
+[Policies](POLICIES.md).
 
 ### Policy Input Document
 
@@ -169,17 +177,21 @@ Every tool call generates this OPA input:
 
 ### Expected Policy Output
 
-Policies should return a `decision` object:
+`data.behavry.authz.decision` resolves to:
 
 ```json
 {
   "result": "allow",
-  "reason": "Read action allowed",
-  "policy": "servers/filesystem"
+  "reason": "no deny rule matched",
+  "policy": "base/decision"
 }
 ```
 
-Valid `result` values: `allow`, `deny`, `escalate` (treated as deny in OSS proxy).
+Valid `result` values: `allow`, `deny`, `escalate` (enforced as deny in the OSS
+proxy, which has no approval queue).
+
+Your own files do not build this object — they add entries to `deny` and
+`decision.rego` turns the set into the response above.
 
 ### Hot Reload
 
@@ -187,7 +199,8 @@ Edit `.rego` files, then restart the proxy to push updates to OPA. In a future v
 
 ## Docker Compose
 
-The included `docker-compose.yml` runs the proxy and OPA sidecar:
+`behavry-proxy init` writes a `docker-compose.yml` that runs the proxy and the
+OPA sidecar (the repository ships an equivalent `docker-compose.yaml`):
 
 ```bash
 docker compose up        # foreground

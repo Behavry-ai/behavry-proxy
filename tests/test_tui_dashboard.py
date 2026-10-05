@@ -1,10 +1,10 @@
 """Tests for TUI dashboard state and rendering."""
 from behavry_proxy.tui.dashboard import (
     DashboardState,
-    render_header,
     render_counters,
-    render_event_table,
     render_dashboard,
+    render_event_table,
+    render_header,
 )
 
 

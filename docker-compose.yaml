@@ -1,8 +1,14 @@
 # Behavry Proxy + OPA sidecar
 #
-# Usage:
 #   docker compose up
 #   curl http://localhost:8080/health
+#
+# The proxy needs OPA to make policy decisions. With OPA unreachable and the
+# default fail-closed posture, every tool call is denied.
+#
+# Policies: the reference set bundled in the package is used unless you
+# provide your own. Run `behavry-proxy init` (or uncomment the mount below)
+# to edit them.
 
 services:
   proxy:
@@ -10,21 +16,29 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - BEHAVRY_OPA_URL=http://opa:8181
-      - BEHAVRY_SERVERS_CONFIG=/app/config/servers.yaml
-      - BEHAVRY_POLICIES_DIR=/app/policies
+      BEHAVRY_OPA_URL: http://opa:8181
+      BEHAVRY_SERVERS_CONFIG: /app/config/servers.yaml
+      # BEHAVRY_POLICIES_DIR: /app/policies
     volumes:
       - ./config:/app/config:ro
-      - ./policies:/app/policies:ro
+      # - ./policies:/app/policies:ro
     depends_on:
-      - opa
+      opa:
+        condition: service_healthy
 
   opa:
-    image: openpolicyagent/opa:latest
-    ports:
-      - "8181:8181"
+    # Pinned: the bundled policies are Rego v1 and require OPA >= 1.0.
+    # `latest` moved to 1.x, which cannot parse Rego v0 policies.
+    image: openpolicyagent/opa:1.20.0
     command:
       - "run"
       - "--server"
       - "--addr=0.0.0.0:8181"
       - "--log-level=info"
+    ports:
+      - "8181:8181"
+    healthcheck:
+      test: ["CMD", "opa", "eval", "--fail", "-f", "raw", "data"]
+      interval: 5s
+      timeout: 3s
+      retries: 10

@@ -10,8 +10,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, Field
-
+from pydantic import BaseModel
 
 # ---------------------------------------------------------------------------
 # JSON-RPC 2.0 envelope

@@ -1,8 +1,8 @@
 """Tests for inbound injection scanner — 16+ patterns, 7 classes."""
 from behavry_proxy.dlp.inbound import (
+    _BUILTIN_PATTERNS,
     InboundScanner,
     get_inbound_scanner,
-    _BUILTIN_PATTERNS,
 )
 
 

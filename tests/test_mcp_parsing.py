@@ -1,11 +1,11 @@
 """Tests for MCP protocol types."""
 from behavry_proxy.proxy.mcp import (
+    JsonRpcError,
     JsonRpcRequest,
     JsonRpcResponse,
-    JsonRpcError,
-    ToolCallParams,
     MCPServerConfig,
     ProxyResult,
+    ToolCallParams,
 )
 
 
