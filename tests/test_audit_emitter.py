@@ -106,3 +106,50 @@ class TestAuditEmitter:
         emitter.emit(_event())
         emitter.close()  # must not raise
         assert emitter.get_stats()["total_events"] == 1
+
+
+class TestEmitterFileHandling:
+    """Durability details of the JSONL sink, which runs for the life of the proxy."""
+
+    def test_appends_to_existing_file(self, tmp_path, capsys):
+        path = tmp_path / "audit.jsonl"
+        path.write_text('{"pre": "existing"}\n')
+
+        emitter = AuditEmitter(log_file=str(path))
+        emitter.emit(_event())
+        emitter.close()
+
+        lines = path.read_text().strip().split("\n")
+        assert len(lines) == 2, "a restart must not truncate the existing audit log"
+        assert json.loads(lines[0]) == {"pre": "existing"}
+
+    def test_creates_parent_directory(self, tmp_path, capsys):
+        nested = tmp_path / "logs" / "deep" / "audit.jsonl"
+
+        emitter = AuditEmitter(log_file=str(nested))
+        emitter.emit(_event())
+        emitter.close()
+
+        assert nested.exists()
+
+    def test_close_is_idempotent(self, tmp_path, capsys):
+        emitter = AuditEmitter(log_file=str(tmp_path / "audit.jsonl"))
+        emitter.emit(_event())
+        emitter.close()
+        emitter.close()  # a second shutdown must not raise
+
+    def test_emit_writes_to_stdout(self, capsys):
+        emitter = AuditEmitter()
+        emitter.emit(_event(tool_name="read_file"))
+        emitter.close()
+
+        assert json.loads(capsys.readouterr().out.strip())["tool_name"] == "read_file"
+
+
+class TestAuditEventSerialisation:
+    def test_zero_latency_is_kept_not_dropped(self):
+        """0.0 is a real measurement; only None is filtered out of to_dict()."""
+        assert _event(latency_ms=0.0).to_dict()["latency_ms"] == 0.0
+
+    def test_data_defaults_to_empty_dict(self):
+        assert _event().to_dict()["data"] == {}
