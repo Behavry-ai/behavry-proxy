@@ -39,7 +39,33 @@ Behavry Proxy enforces governance at the protocol layer. Every `tools/call` pass
 
 ## Quick Start
 
-### Docker Compose (recommended)
+The proxy makes every decision by asking an OPA sidecar. **Without a reachable
+OPA it denies every tool call** — that is the fail-closed default, not a bug.
+Both paths below start one for you.
+
+### pip (recommended)
+
+```bash
+pip install behavry-proxy
+behavry-proxy init      # writes config/servers.yaml, policies/ and docker-compose.yml
+docker compose up       # starts the proxy and the OPA sidecar
+```
+
+`init` never overwrites files you have edited — pass `--force` if you want it to.
+
+Proxy is at `http://localhost:8080`. OPA at `http://localhost:8181`.
+
+To run the proxy directly against an OPA you already have:
+
+```bash
+behavry-proxy --opa-url http://localhost:8181
+```
+
+The reference policies ship inside the package, so the proxy has a valid
+policy set to push even before you run `init`. Edit `config/servers.yaml` to
+point at your own MCP servers.
+
+### Docker Compose from a clone
 
 ```bash
 git clone https://github.com/Behavry-ai/behavry-proxy.git
@@ -47,15 +73,6 @@ cd behavry-proxy
 cp config/servers.yaml.example config/servers.yaml
 # Edit config/servers.yaml with your MCP server URLs
 docker compose up
-```
-
-Proxy is at `http://localhost:8080`. OPA at `http://localhost:8181`.
-
-### pip
-
-```bash
-pip install behavry-proxy
-behavry-proxy
 ```
 
 ### Verify
@@ -123,38 +140,49 @@ See [Configuration](docs/CONFIGURATION.md) for Cursor, custom agents, and all op
 
 ## Writing Policies
 
-Policies are Rego files in `policies/`. They're pushed to OPA on proxy startup.
+Run `behavry-proxy init` to get an editable copy of the reference policies in
+`policies/`. They're pushed to OPA on proxy startup.
 
-**Allow reads, deny writes:**
-
-```rego
-package behavry.authz
-
-import future.keywords.in
-
-decision := {
-    "result": "allow",
-    "reason": "Read allowed",
-    "policy": "read_only"
-} {
-    input.request.action in {"read", "get", "list", "search"}
-}
-```
+Policies are Rego v1 and require OPA 1.0 or newer. They never define
+`decision` themselves — `decision.rego` owns that and aggregates a `deny` set,
+so any number of files can contribute a rule without colliding. Everything not
+denied is allowed.
 
 **Block sensitive paths:**
 
 ```rego
 package behavry.authz
 
-decision := {
-    "result": "deny",
+import rego.v1
+
+deny contains {
     "reason": "Sensitive path blocked",
-    "policy": "path_block"
-} {
+    "policy": "path_block",
+} if {
     input.request.mcp_server == "filesystem"
-    contains(input.request.parameters.path, ".env")
+    contains(input.request.resource, ".env")
 }
 ```
+
+**Deny writes outside a sandbox:**
+
+```rego
+package behavry.authz
+
+import rego.v1
+
+deny contains {
+    "reason": "Writes are limited to /tmp/sandbox",
+    "policy": "sandbox_only",
+} if {
+    input.request.action in {"write", "create", "update"}
+    not startswith(input.request.resource, "/tmp/sandbox/")
+}
+```
+
+Drop either file into `policies/` and restart. See
+[Policies](docs/POLICIES.md) for the full input schema and testing with
+`opa eval`.
 
 **Block on DLP findings:**
 

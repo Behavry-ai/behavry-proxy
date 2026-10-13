@@ -7,11 +7,10 @@ using the Streamable HTTP transport (standard MCP protocol).
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 import httpx
 
-from behavry_proxy.proxy.mcp import JsonRpcRequest, JsonRpcResponse, JsonRpcError
+from behavry_proxy.proxy.mcp import JsonRpcError, JsonRpcRequest, JsonRpcResponse
 
 logger = logging.getLogger(__name__)
 

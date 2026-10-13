@@ -1,11 +1,11 @@
 """Tests for DLP scanner — 26 builtin patterns."""
 from behavry_proxy.dlp.scanner import (
-    DLPScanner,
     BUILTIN_PATTERNS,
-    luhn_check,
-    ssn_check,
-    redact_match,
+    DLPScanner,
     get_dlp_scanner,
+    luhn_check,
+    redact_match,
+    ssn_check,
 )
 
 

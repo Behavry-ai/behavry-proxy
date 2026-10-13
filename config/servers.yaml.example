@@ -1,26 +1,30 @@
-# Behavry Proxy — MCP Server Configuration
+# Behavry Proxy — MCP server configuration
 #
-# Copy this file to config/servers.yaml and configure your upstream MCP servers.
-# Each server must have a unique id and a transport (only "http" is supported in v0.1).
+# Every backend MCP server the proxy forwards to. Each entry needs a unique
+# `id` (which becomes the proxy route /mcp/<id>), a `name`, and a transport.
+#
+# Loaded from, in order:
+#   1. --config / BEHAVRY_SERVERS_CONFIG
+#   2. ./config/servers.yaml
+#   3. ./servers.yaml
+#
+# Run `behavry-proxy init` to drop a copy of this file, the reference
+# policies and a docker-compose.yml into the current directory.
 
 servers:
-  # Example: GitHub MCP server
-  - id: github
-    name: GitHub MCP Server
-    transport: http
-    url: http://localhost:3000
-    description: GitHub API via MCP
-
-  # Example: Filesystem MCP server
-  - id: filesystem
-    name: Filesystem Server
-    transport: http
-    url: http://localhost:3001
-    description: Local filesystem access via MCP
-
-  # Example: Slack MCP server
-  # - id: slack
-  #   name: Slack MCP Server
+  # HTTP transport — the proxy forwards JSON-RPC to `url`.
+  # - id: github
+  #   name: GitHub MCP Server
   #   transport: http
-  #   url: http://localhost:3002
-  #   description: Slack API via MCP
+  #   url: http://localhost:3000/mcp
+  #   description: GitHub API via MCP
+
+  # stdio transport — the proxy spawns `command` and speaks JSON-RPC over
+  # its stdin/stdout.
+  # - id: filesystem
+  #   name: Filesystem Server
+  #   transport: stdio
+  #   command: ["npx", "-y", "@modelcontextprotocol/server-filesystem", "/tmp/sandbox"]
+  #   env:
+  #     SOME_VAR: "value"
+  #   description: Sandboxed filesystem access via MCP

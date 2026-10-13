@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import time
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -60,8 +59,16 @@ def build_opa_input(
     parameters: dict[str, Any] | None = None,
     context: dict[str, Any] | None = None,
     mcp_server: str | None = None,
+    dlp_findings: list[Any] | None = None,
+    dlp_max_severity: str | None = None,
 ) -> dict[str, Any]:
-    """Build the standard OPA input envelope for policy decisions."""
+    """
+    Build the standard OPA input envelope for policy decisions.
+
+    DLP scanning runs before policy evaluation, so its findings are passed in
+    under ``input.dlp`` and policies can act on them.
+    """
+    findings = [f.to_dict() if hasattr(f, "to_dict") else f for f in (dlp_findings or [])]
     return {
         "input": {
             "agent": {
@@ -73,6 +80,11 @@ def build_opa_input(
                 "resource": resource,
                 "parameters": parameters or {},
                 "mcp_server": mcp_server,
+            },
+            "dlp": {
+                "has_findings": bool(findings),
+                "findings": findings,
+                "max_severity": dlp_max_severity or "none",
             },
             "context": context or {},
         }

@@ -13,8 +13,7 @@ import logging
 from fastapi import FastAPI
 
 from behavry_proxy import __version__
-from behavry_proxy.config import get_config
-from behavry_proxy.proxy.mcp import MCPServerConfig
+from behavry_proxy.config import ProxyConfig, get_config
 from behavry_proxy.proxy.registry import close_all, register_server
 from behavry_proxy.proxy.router import router
 
@@ -50,8 +49,19 @@ def create_app() -> FastAPI:
             except Exception as exc:
                 logger.error("Failed to register server %s: %s", server_cfg.id, exc)
 
-        # Push Rego policies to OPA if policies_dir is set
-        if cfg.policies_dir:
+        # Check OPA once up front. Pushing policies to an OPA that is not
+        # there costs a retry storm per file and buries the real problem.
+        from behavry_proxy.policy.client import get_opa_client
+
+        opa_healthy = await get_opa_client().is_healthy()
+
+        if cfg.policies_dir and opa_healthy:
+            if cfg.policies_are_bundled:
+                logger.info(
+                    "Using the reference policies bundled with the package (%s). "
+                    "Run `behavry-proxy init` for an editable copy.",
+                    cfg.policies_dir,
+                )
             await _push_policies(cfg.policies_dir)
 
         logger.info(
@@ -63,6 +73,9 @@ def create_app() -> FastAPI:
             cfg.inbound_scan_enabled,
         )
 
+        if not opa_healthy:
+            _warn_opa_unreachable(cfg)
+
     @app.on_event("shutdown")
     async def shutdown() -> None:
         await close_all()
@@ -71,6 +84,28 @@ def create_app() -> FastAPI:
         logger.info("Behavry Proxy shutdown complete")
 
     return app
+
+
+def _warn_opa_unreachable(cfg: ProxyConfig) -> None:
+    """
+    Say plainly what is wrong when OPA is down.
+
+    With the default fail-closed posture an unreachable OPA denies every tool
+    call, which otherwise looks like the proxy silently refusing everything.
+    """
+    posture = (
+        "every tool call will be DENIED (fail-closed)"
+        if cfg.opa_fail_closed
+        else "every tool call will be ALLOWED (fail-open)"
+    )
+    logger.warning(
+        "OPA is unreachable at %s — %s.\n"
+        "  The proxy needs an OPA sidecar to make policy decisions. To start one:\n"
+        "    behavry-proxy init && docker compose up\n"
+        "  or point the proxy at an existing OPA with --opa-url / BEHAVRY_OPA_URL.",
+        cfg.opa_url,
+        posture,
+    )
 
 
 async def _push_policies(policies_dir: str) -> None:

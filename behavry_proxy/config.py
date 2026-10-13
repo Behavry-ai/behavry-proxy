@@ -9,11 +9,15 @@ import logging
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
 
 import yaml
 
 from behavry_proxy.proxy.mcp import MCPServerConfig
+from behavry_proxy.resources import (
+    SERVERS_CONFIG_SEARCH_PATH,
+    bundled_policies_dir,
+    find_servers_config,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -53,8 +57,12 @@ class ProxyConfig:
     # Servers (loaded from YAML)
     servers: list[MCPServerConfig] = field(default_factory=list)
 
-    # Policies directory (Rego files to push to OPA on startup)
+    # Policies directory (Rego files to push to OPA on startup).
+    # Defaults to the reference policies bundled in the wheel.
     policies_dir: str | None = None
+
+    # True when policies_dir is the bundled set rather than the user's own.
+    policies_are_bundled: bool = False
 
 
 def load_servers_yaml(path: str | Path) -> list[MCPServerConfig]:
@@ -63,6 +71,7 @@ def load_servers_yaml(path: str | Path) -> list[MCPServerConfig]:
     if not path.exists():
         logger.warning("Servers config not found: %s", path)
         return []
+    logger.info("Loading MCP servers from %s", path)
 
     with open(path) as f:
         data = yaml.safe_load(f)
@@ -97,12 +106,31 @@ def load_config() -> ProxyConfig:
         audit_log_file=os.environ.get("BEHAVRY_AUDIT_LOG_FILE"),
         audit_log_format=os.environ.get("BEHAVRY_AUDIT_LOG_FORMAT", "jsonl"),
         auth_token=os.environ.get("BEHAVRY_AUTH_TOKEN"),
-        policies_dir=os.environ.get("BEHAVRY_POLICIES_DIR"),
     )
 
-    # Load servers from YAML
-    servers_path = os.environ.get("BEHAVRY_SERVERS_CONFIG", "config/servers.yaml")
-    config.servers = load_servers_yaml(servers_path)
+    # Policies: an explicit directory wins, otherwise fall back to the
+    # reference policies bundled in the wheel so a pip install has something
+    # valid to push to OPA.
+    policies_dir = os.environ.get("BEHAVRY_POLICIES_DIR")
+    if policies_dir:
+        config.policies_dir = policies_dir
+        config.policies_are_bundled = False
+    else:
+        config.policies_dir = str(bundled_policies_dir())
+        config.policies_are_bundled = True
+
+    # Servers: explicit path wins, otherwise search the working directory.
+    explicit = os.environ.get("BEHAVRY_SERVERS_CONFIG")
+    servers_path = find_servers_config(explicit)
+    if servers_path is None:
+        logger.warning(
+            "No MCP servers configured — looked for %s in %s. "
+            "Run `behavry-proxy init` to create one.",
+            " and ".join(SERVERS_CONFIG_SEARCH_PATH),
+            Path.cwd(),
+        )
+    else:
+        config.servers = load_servers_yaml(servers_path)
 
     return config
 

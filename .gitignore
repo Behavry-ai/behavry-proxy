@@ -35,5 +35,9 @@ audit_*.log
 .env
 .env.*
 
+# Local MCP server config — may contain internal hostnames and tokens.
+# The template lives at config/servers.yaml.example.
+config/servers.yaml
+
 # Claude Code
 .claude/settings.local.json

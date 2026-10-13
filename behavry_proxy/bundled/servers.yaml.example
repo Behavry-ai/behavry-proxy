@@ -1,0 +1,30 @@
+# Behavry Proxy — MCP server configuration
+#
+# Every backend MCP server the proxy forwards to. Each entry needs a unique
+# `id` (which becomes the proxy route /mcp/<id>), a `name`, and a transport.
+#
+# Loaded from, in order:
+#   1. --config / BEHAVRY_SERVERS_CONFIG
+#   2. ./config/servers.yaml
+#   3. ./servers.yaml
+#
+# Run `behavry-proxy init` to drop a copy of this file, the reference
+# policies and a docker-compose.yml into the current directory.
+
+servers:
+  # HTTP transport — the proxy forwards JSON-RPC to `url`.
+  # - id: github
+  #   name: GitHub MCP Server
+  #   transport: http
+  #   url: http://localhost:3000/mcp
+  #   description: GitHub API via MCP
+
+  # stdio transport — the proxy spawns `command` and speaks JSON-RPC over
+  # its stdin/stdout.
+  # - id: filesystem
+  #   name: Filesystem Server
+  #   transport: stdio
+  #   command: ["npx", "-y", "@modelcontextprotocol/server-filesystem", "/tmp/sandbox"]
+  #   env:
+  #     SOME_VAR: "value"
+  #   description: Sandboxed filesystem access via MCP
