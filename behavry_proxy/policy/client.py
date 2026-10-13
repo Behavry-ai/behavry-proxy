@@ -45,6 +45,11 @@ DENY_CLOSED = PolicyDecision(result="deny", reason="OPA unreachable — fail clo
 DENY_ERROR = PolicyDecision(result="deny", reason="Policy evaluation error")
 
 
+def _fail_open(reason: str) -> PolicyDecision:
+    """Allow decision used when fail_closed is disabled and OPA is unusable."""
+    return PolicyDecision(result="allow", reason=reason)
+
+
 # ---------------------------------------------------------------------------
 # OPA input builder (simplified for OSS proxy)
 # ---------------------------------------------------------------------------
@@ -149,16 +154,16 @@ class OPAClient:
                     await asyncio.sleep(0.1)
                     continue
                 logger.error("OPA timeout/connection error after retry at %s: %s", url, exc)
-                return DENY_CLOSED if self._fail_closed else PolicyDecision(result="allow", reason="OPA timeout — fail open")
+                return DENY_CLOSED if self._fail_closed else _fail_open("OPA timeout — fail open")
             except httpx.HTTPStatusError as exc:
                 logger.error("OPA HTTP error %s at %s", exc.response.status_code, url)
-                return DENY_ERROR if self._fail_closed else PolicyDecision(result="allow", reason="OPA HTTP error — fail open")
+                return DENY_ERROR if self._fail_closed else _fail_open("OPA HTTP error — fail open")
             except Exception as exc:
                 logger.exception("OPA unexpected error: %s", exc)
-                return DENY_CLOSED if self._fail_closed else PolicyDecision(result="allow", reason="OPA error — fail open")
+                return DENY_CLOSED if self._fail_closed else _fail_open("OPA error — fail open")
 
         if resp is None:
-            return DENY_CLOSED if self._fail_closed else PolicyDecision(result="allow", reason="OPA unreachable after retry")
+            return DENY_CLOSED if self._fail_closed else _fail_open("OPA unreachable after retry")
 
         data = resp.json()
 

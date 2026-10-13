@@ -74,7 +74,11 @@ class TestDLPScanner:
         assert any(f.pattern == "private_key" for f in findings)
 
     def test_jwt_token(self):
-        jwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U"
+        jwt = (
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
+            "eyJzdWIiOiIxMjM0NTY3ODkwIn0."
+            "dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U"
+        )
         findings = self.scanner.scan(jwt, "test")
         assert any(f.pattern == "jwt_token" for f in findings)
 

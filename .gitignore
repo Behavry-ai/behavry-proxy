@@ -25,7 +25,8 @@ env/
 Thumbs.db
 
 # Poetry
-poetry.lock
+# poetry.lock IS committed — CI and Docker builds must resolve the same
+# dependency set. Regenerate with `poetry lock` after editing pyproject.toml.
 
 # Audit logs (may contain sensitive data)
 *.jsonl
