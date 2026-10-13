@@ -16,6 +16,10 @@ env:
   # Keep in step with the OPA image pinned in docker-compose.yaml. The bundled
   # policies are Rego v1 and do not parse on OPA 0.x.
   OPA_VERSION: "1.20.0"
+  # sha256 of opa_linux_amd64_static for the version above, from the upstream
+  # release's own .sha256 asset. Update both together, never just the version —
+  # an unverified download of a pinned version is still an unverified download.
+  OPA_SHA256: "4e4c65be08ed27e7375d816d446a444e65ba101806014c7a51b2a7652c2a942a"
 
 jobs:
   test:
@@ -69,6 +73,10 @@ jobs:
         run: |
           curl -fsSL -o "$RUNNER_TEMP/opa" \
             "https://github.com/open-policy-agent/opa/releases/download/v${OPA_VERSION}/opa_linux_amd64_static"
+          # Verify before chmod +x: this binary evaluates the policies that
+          # decide allow/deny, so a swapped release asset must fail the build
+          # rather than silently run.
+          echo "${OPA_SHA256}  $RUNNER_TEMP/opa" | sha256sum --check --strict -
           chmod +x "$RUNNER_TEMP/opa"
           echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
 
@@ -96,6 +104,17 @@ jobs:
       - name: Install Poetry
         run: pipx install poetry
 
+      # Needed by verify_wheel.py, which parses the policies as installed in
+      # site-packages — something the `policies` job cannot do, since it only
+      # ever sees the checkout.
+      - name: Install OPA
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/opa" \
+            "https://github.com/open-policy-agent/opa/releases/download/v${OPA_VERSION}/opa_linux_amd64_static"
+          echo "${OPA_SHA256}  $RUNNER_TEMP/opa" | sha256sum --check --strict -
+          chmod +x "$RUNNER_TEMP/opa"
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+
       - name: Build
         run: poetry build
 
@@ -115,7 +134,8 @@ jobs:
           # the installed package.
           mkdir -p "$RUNNER_TEMP/elsewhere"
           cd "$RUNNER_TEMP/elsewhere"
-          "$RUNNER_TEMP/clean/bin/python" "$GITHUB_WORKSPACE/scripts/verify_wheel.py"
+          "$RUNNER_TEMP/clean/bin/python" \
+            "$GITHUB_WORKSPACE/scripts/verify_wheel.py" --require-opa
 
       - name: Upload distribution
         uses: actions/upload-artifact@v4
