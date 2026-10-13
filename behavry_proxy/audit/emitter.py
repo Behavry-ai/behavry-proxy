@@ -87,7 +87,7 @@ class AuditEmitter:
             self._file_handle.write(line + "\n")
 
     def get_stats(self) -> dict[str, int]:
-        """Return event counters for the health/metrics endpoint."""
+        """Return event counters for the `GET /stats` endpoint."""
         return {
             "total_events": self._event_count,
             "denials": self._deny_count,

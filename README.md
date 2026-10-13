@@ -33,7 +33,6 @@ Behavry Proxy enforces governance at the protocol layer. Every `tools/call` pass
 | **Fail-Closed** | OPA unreachable? All requests denied. Configurable to fail-open for development. |
 | **Rate Limiting** | Per-agent sliding window with burst detection and spike anomaly detection. |
 | **Terminal Dashboard** | Rich-based live TUI showing tool calls, decisions, DLP findings in real time. |
-| **Prometheus Metrics** | `/metrics` endpoint — tool calls, deny rate, DLP findings, OPA latency. |
 | **Audit Log** | JSON lines to file + stdout. Every decision recorded with full context. |
 | **Reference Policies** | Ready-to-use Rego policies for filesystem, GitHub, database, Slack, web APIs. |
 
@@ -81,8 +80,8 @@ docker compose up
 # Health check
 curl http://localhost:8080/health
 
-# Metrics
-curl http://localhost:8080/metrics
+# Audit event counters
+curl http://localhost:8080/stats
 
 # List configured servers
 curl http://localhost:8080/servers
@@ -260,7 +259,7 @@ python -m behavry_proxy.tui.dashboard /path/to/audit.jsonl
 | POST | `/mcp/{server_id}` | MCP proxy endpoint |
 | GET | `/servers` | List configured servers |
 | GET | `/health` | Liveness + OPA status |
-| GET | `/metrics` | Prometheus counters |
+| GET | `/stats` | Audit event counters |
 
 ## Documentation
 

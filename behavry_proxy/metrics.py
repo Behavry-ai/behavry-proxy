@@ -1,11 +1,17 @@
 """
-Health and metrics endpoints — Prometheus text format.
+In-process counters, renderable as Prometheus text format.
 
-Provides:
-  GET /health      — liveness check (200 OK)
-  GET /metrics     — Prometheus-compatible counters
+NOT currently exposed over HTTP, and not currently wired into the
+enforcement pipeline — nothing calls the ``record_*`` methods on the request
+path, so the singleton returned by :func:`get_metrics` reads zero at runtime.
+Per-request counts that are actually maintained live in the audit emitter and
+are served by ``GET /stats``.
 
-Counters tracked:
+This module is kept because the counter set and the exposition-format
+rendering are the intended shape of a future ``GET /metrics``; exposing it
+means first calling the recorders from ``proxy/pipeline.py``.
+
+Counters defined:
   behavry_proxy_tool_calls_total        — total tool calls processed
   behavry_proxy_tool_calls_allowed      — tool calls allowed
   behavry_proxy_tool_calls_denied       — tool calls denied

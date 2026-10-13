@@ -15,7 +15,7 @@ When you outgrow it, Behavry is the commercial platform that adds identity, visi
 | Fail-closed on OPA unavailability (configurable) | ✅ |
 | Reference policies per server type (filesystem, database, GitHub, Slack, web) | ✅ |
 | Terminal dashboard — live tool calls, decisions, DLP findings | ✅ |
-| Prometheus metrics — tool calls/sec, deny rate, DLP findings, OPA latency | ✅ |
+| Audit event counters over HTTP (`GET /stats`) | ✅ |
 | Per-agent rate limiting with spike detection | ✅ |
 | JSON lines audit log | ✅ |
 
