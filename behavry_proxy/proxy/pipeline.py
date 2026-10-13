@@ -330,7 +330,11 @@ async def enforce(
                     agent_id=agent_id,
                     server_id=server_id,
                     tool_name=tool_name,
-                    data={"findings": [f.to_dict() for f in resp_findings], "direction": "output", "max_severity": max_sev},
+                    data={
+                        "findings": [f.to_dict() for f in resp_findings],
+                        "direction": "output",
+                        "max_severity": max_sev,
+                    },
                 ))
 
     # ── Step 8: Inbound injection scan on response ────────────────────────

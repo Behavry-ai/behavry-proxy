@@ -1,0 +1,124 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Keep in step with the OPA image pinned in docker-compose.yaml. The bundled
+  # policies are Rego v1 and do not parse on OPA 0.x.
+  OPA_VERSION: "1.20.0"
+
+jobs:
+  test:
+    name: test (python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Lower bound is pyproject's `python = "^3.12"`.
+        python-version: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Poetry
+        run: pipx install poetry
+
+      - name: Use an in-project virtualenv
+        run: poetry config virtualenvs.in-project true
+
+      - name: Cache virtualenv
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('poetry.lock') }}
+
+      # Fails if pyproject.toml was edited without re-running `poetry lock`,
+      # so CI and Docker cannot silently resolve different dependency sets.
+      - name: Verify poetry.lock matches pyproject.toml
+        run: poetry check --lock
+
+      - name: Install dependencies
+        run: poetry install --with dev
+
+      - name: Lint
+        run: poetry run ruff check .
+
+      - name: Test
+        run: poetry run pytest
+
+  policies:
+    name: policies (OPA)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install OPA
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/opa" \
+            "https://github.com/open-policy-agent/opa/releases/download/v${OPA_VERSION}/opa_linux_amd64_static"
+          chmod +x "$RUNNER_TEMP/opa"
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+
+      - name: Show OPA version
+        run: opa version
+
+      # Catches Rego v0 syntax and rules that conflict with one another —
+      # either one leaves OPA with no usable decision, which denies everything.
+      - name: Check policies
+        run: opa check --strict behavry_proxy/bundled/policies
+
+      - name: Test policies
+        run: opa test behavry_proxy/bundled/policies tests/policies -v
+
+  package:
+    name: package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Poetry
+        run: pipx install poetry
+
+      - name: Build
+        run: poetry build
+
+      - name: Validate distribution metadata
+        run: |
+          pipx install twine
+          twine check dist/*
+
+      # The package has to work from a clean install, not just from the repo.
+      - name: Verify the wheel installs and runs standalone
+        run: |
+          python -m venv "$RUNNER_TEMP/clean"
+          "$RUNNER_TEMP/clean/bin/pip" install --quiet dist/*.whl
+          "$RUNNER_TEMP/clean/bin/behavry-proxy" --version
+          "$RUNNER_TEMP/clean/bin/behavry-proxy" --help > /dev/null
+          # Run from outside the checkout so the source tree cannot shadow
+          # the installed package.
+          mkdir -p "$RUNNER_TEMP/elsewhere"
+          cd "$RUNNER_TEMP/elsewhere"
+          "$RUNNER_TEMP/clean/bin/python" "$GITHUB_WORKSPACE/scripts/verify_wheel.py"
+
+      - name: Upload distribution
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
