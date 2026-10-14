@@ -24,8 +24,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Lower bound is pyproject's `python = "^3.12"`.
-        python-version: ["3.12", "3.13"]
+        # Lower bound is pyproject's `python = "^3.11"`.
+        python-version: ["3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
 
