@@ -4,13 +4,17 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Lets the release workflow run exactly these gates, rather than keeping a
+  # second copy that can drift.
+  workflow_call:
 
 permissions:
   contents: read
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Never cancel a run that is gating a release.
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
 env:
   # Keep in step with the OPA image pinned in docker-compose.yaml. The bundled
@@ -55,6 +59,11 @@ jobs:
 
       - name: Lint
         run: poetry run ruff check .
+
+      # pyproject, __init__.py and server.json all declare the version; a
+      # release that disagrees between them fails MCP registry validation.
+      - name: Check version consistency
+        run: poetry run python scripts/check_version.py
 
       - name: Test
         run: poetry run pytest
