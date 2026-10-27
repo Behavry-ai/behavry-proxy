@@ -26,6 +26,15 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    # Update poetry.lock only, never the constraints in pyproject.toml.
+    #
+    # The default strategy raises the floor of each constraint, which is right
+    # for an application and wrong for something published to PyPI: rewriting
+    # `pydantic>=2.0` to `>=2.14.1` makes the package uninstallable for anyone
+    # pinned to an older 2.x, which is a packaging decision rather than a
+    # dependency update, and not one to take inside a group labelled
+    # minor-patch. Raising a floor should be deliberate, so it stays manual.
+    versioning-strategy: "lockfile-only"
     commit-message:
       prefix: "chore"
       include: "scope"
