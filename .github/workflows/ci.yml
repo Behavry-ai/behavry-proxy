@@ -116,6 +116,77 @@ jobs:
       - name: Test policies
         run: opa test behavry_proxy/bundled/policies tests/policies -v
 
+  docker:
+    name: docker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # The caveat documented in .github/dependabot.yml, enforced instead of
+      # merely written down. A bump to the OPA image in docker-compose.yaml has
+      # to move OPA_VERSION here too - and OPA_SHA256 with it - or the other
+      # jobs download one release and verify it against another's digest.
+      # Dependabot now watches that image, so this will be exercised.
+      - name: OPA version agrees with docker-compose
+        run: |
+          compose="$(sed -n \
+            's|^[[:space:]]*image:[[:space:]]*openpolicyagent/opa:\(.*\)$|\1|p' \
+            docker-compose.yaml)"
+          echo "ci.yml OPA_VERSION:        ${OPA_VERSION}"
+          echo "docker-compose.yaml image: ${compose:-<no openpolicyagent/opa image found>}"
+          if [ -z "$compose" ]; then
+            echo "::error::could not find the openpolicyagent/opa image in docker-compose.yaml"
+            exit 1
+          fi
+          if [ "$compose" != "$OPA_VERSION" ]; then
+            echo "::error::OPA version mismatch - update OPA_VERSION *and* OPA_SHA256 in this file to match docker-compose.yaml"
+            exit 1
+          fi
+
+      - name: Build the image
+        run: docker build -t behavry-proxy:ci .
+
+      # Builds alone prove little: a broken entrypoint or a dependency missing
+      # from the runtime layer only shows up on start.
+      - name: Image runs
+        run: docker run --rm behavry-proxy:ci behavry-proxy --version
+
+      - name: docker-compose.yaml is valid
+        run: docker compose config --quiet
+
+      # The documented quickstart, run for real. This is the only gate that
+      # exercises the proxy against a live OPA at the pinned version, so it
+      # covers the sidecar wiring the unit tests mock out.
+      - name: Compose stack reports healthy
+        run: |
+          cp config/servers.yaml.example config/servers.yaml
+          docker compose up -d --wait
+          for _ in $(seq 1 30); do
+            body="$(curl -fsS http://localhost:8080/health || true)"
+            case "$body" in *'"status":"healthy"'*) break ;; esac
+            sleep 2
+          done
+          echo "$body"
+          # Standalone, /health answers 503 with "degraded"/"unreachable" by
+          # design, so asserting on the body is what distinguishes a working
+          # sidecar from a proxy that merely started.
+          case "$body" in
+            *'"status":"healthy"'*) ;;
+            *) echo "::error::proxy did not report healthy against the OPA sidecar"; exit 1 ;;
+          esac
+          case "$body" in
+            *'"opa":"connected"'*) ;;
+            *) echo "::error::proxy did not reach OPA"; exit 1 ;;
+          esac
+
+      - name: Stack logs
+        if: failure()
+        run: docker compose logs --no-color
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
+
   package:
     name: package
     runs-on: ubuntu-latest
