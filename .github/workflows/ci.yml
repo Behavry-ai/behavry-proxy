@@ -13,8 +13,24 @@ permissions:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  # Never cancel a run that is gating a release.
-  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+  # Cancel only pull-request runs, where a new push makes the previous run
+  # moot and nothing has read its result yet.
+  #
+  # Every other trigger produces a status something else trusts, so cancelling
+  # it destroys information rather than saving time:
+  #   - push to main  leaves the default branch's own commit with a cancelled
+  #                   check, which is indistinguishable at a glance from a
+  #                   branch that was never tested.
+  #   - tag push      is gating a release to PyPI.
+  #   - workflow_call is the `gate` job in release.yml, reached either by a tag
+  #                   or by a manual dry run from main.
+  #
+  # Testing the event rather than the ref is what covers that last case: a
+  # dispatched release gate runs with github.ref still on refs/heads/main, so a
+  # ref-based check reads it as cancellable. It also fails in the safe
+  # direction - anything this expression cannot classify is simply not
+  # cancelled.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   # Keep in step with the OPA image pinned in docker-compose.yaml. The bundled
