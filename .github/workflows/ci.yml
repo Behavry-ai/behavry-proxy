@@ -68,14 +68,28 @@ jobs:
         with:
           path: .venv
           key: venv-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('poetry.lock') }}
+          # Without this, any change to poetry.lock misses completely and
+          # reinstalls everything. Falling back to the newest venv for the same
+          # OS and Python lets `poetry sync` install only the delta.
+          #
+          # The fallback is only safe because the install step below is `sync`
+          # rather than `install`: a restored venv can hold a package that the
+          # new lock dropped, and `install` leaves such packages in place.
+          restore-keys: |
+            venv-${{ runner.os }}-py${{ matrix.python-version }}-
 
       # Fails if pyproject.toml was edited without re-running `poetry lock`,
       # so CI and Docker cannot silently resolve different dependency sets.
       - name: Verify poetry.lock matches pyproject.toml
         run: poetry check --lock
 
+      # `sync`, not `install`: it reconciles the environment to the lockfile
+      # exactly, removing anything no longer locked. With a cache fallback that
+      # matters for correctness, not tidiness - `install` would leave a dropped
+      # dependency importable, so tests could pass against a package that no
+      # longer ships.
       - name: Install dependencies
-        run: poetry install --with dev
+        run: poetry sync --with dev
 
       - name: Lint
         run: poetry run ruff check .
