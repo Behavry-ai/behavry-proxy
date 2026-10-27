@@ -14,10 +14,16 @@ the code reads at runtime but the wheel never shipped.
 """
 from __future__ import annotations
 
+import shutil
 import sys
 from pathlib import Path
 
 FAILURES: list[str] = []
+SKIPPED: list[str] = []
+
+# CI passes this so a missing opa is a failure there rather than a quiet skip,
+# while a local run without opa installed still exercises everything else.
+REQUIRE_OPA = "--require-opa" in sys.argv
 
 
 def check(label: str, fn) -> None:
@@ -27,7 +33,11 @@ def check(label: str, fn) -> None:
         FAILURES.append(f"{label}: {type(exc).__name__}: {exc}")
         print(f"  FAIL  {label}: {type(exc).__name__}: {exc}")
     else:
-        print(f"  ok    {label}{f' ({detail})' if detail else ''}")
+        if isinstance(detail, str) and detail.startswith("SKIPPED"):
+            SKIPPED.append(f"{label}: {detail}")
+            print(f"  skip  {label}: {detail}")
+        else:
+            print(f"  ok    {label}{f' ({detail})' if detail else ''}")
 
 
 def installed_not_source() -> str:
@@ -83,17 +93,38 @@ def bundled_resources() -> str:
     return f"{len(rego)} policies + 2 templates"
 
 
-def no_rego_v0() -> str:
-    """Rego v0 does not parse on OPA 1.x. Guarded here as well as in opa check."""
+def installed_policies_parse() -> str:
+    """
+    Ask OPA to parse the policies *as installed*, which is the only check here
+    that the `opa check` CI step cannot make — that step only ever sees the
+    checkout, and shadowing by the source tree is the whole reason this script
+    exists.
+
+    Grepping for `import future.keywords` is not a substitute: a Rego v0 file
+    without that import parses as v0 regardless, and the import is a legal
+    no-op under v1, so it is unreliable in both directions.
+    """
+    import subprocess
+
     from behavry_proxy.resources import bundled_policies_dir
 
-    offenders = [
-        p.name
-        for p in bundled_policies_dir().rglob("*.rego")
-        if "import future.keywords" in p.read_text()
-    ]
-    assert not offenders, f"Rego v0 imports in {offenders}"
-    return "all Rego v1"
+    policies = bundled_policies_dir()
+    opa = shutil.which("opa")
+    if opa is None:
+        if REQUIRE_OPA:
+            raise AssertionError("opa is not on PATH and --require-opa was given")
+        return "SKIPPED - opa not on PATH"
+
+    proc = subprocess.run(
+        [opa, "check", "--strict", str(policies)],
+        capture_output=True,
+        text=True,
+    )
+    assert proc.returncode == 0, (
+        f"opa check --strict failed on the installed policies at {policies}:\n"
+        f"{(proc.stderr or proc.stdout).strip()}"
+    )
+    return f"opa check --strict clean ({len(list(policies.rglob('*.rego')))} files)"
 
 
 def init_scaffolds(tmp: Path) -> str:
@@ -114,13 +145,19 @@ def init_scaffolds(tmp: Path) -> str:
 def main() -> int:
     import tempfile
 
+    # Every check below is an assert, so under -O they all vanish and this
+    # script would exit 0 having verified nothing.
+    if not __debug__:
+        print("ERROR: run without -O; every check in this script is an assert")
+        return 1
+
     print(f"verifying wheel with {sys.executable}")
     check("installed from wheel, not source", installed_not_source)
     check("TUI imports (rich)", tui_imports)
     check("metrics needs no prometheus-client", metrics_without_prometheus)
     check("FastAPI app imports", app_imports)
     check("bundled policies and templates ship", bundled_resources)
-    check("bundled policies are Rego v1", no_rego_v0)
+    check("installed policies parse on OPA", installed_policies_parse)
 
     with tempfile.TemporaryDirectory() as tmp:
         check("init scaffolds a full setup", lambda: init_scaffolds(Path(tmp)))
@@ -128,6 +165,12 @@ def main() -> int:
     if FAILURES:
         print(f"\n{len(FAILURES)} check(s) failed")
         return 1
+    if SKIPPED:
+        # Not a failure, but do not let it read as a clean run.
+        print(f"\nall checks passed, {len(SKIPPED)} skipped:")
+        for entry in SKIPPED:
+            print(f"  - {entry}")
+        return 0
     print("\nall checks passed")
     return 0
 
